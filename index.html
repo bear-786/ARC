@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เช็กชื่อโฮมรูม</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── TOKENS ── */
+:root {
+  --ink:       oklch(22% 0.02 250);
+  --ink-2:     oklch(38% 0.025 250);
+  --ink-3:     oklch(55% 0.02 250);
+  --line:      oklch(88% 0.01 250);
+  --line-2:    oklch(92% 0.008 250);
+  --canvas:    oklch(97% 0.005 250);
+  --white:     oklch(99% 0.003 250);
+  --blue:      oklch(52% 0.18 260);
+  --blue-bg:   oklch(95% 0.04 260);
+  --blue-line: oklch(85% 0.07 260);
+  --green:     oklch(56% 0.16 155);
+  --green-bg:  oklch(95% 0.04 155);
+  --red:       oklch(56% 0.19 25);
+  --red-bg:    oklch(95% 0.05 25);
+  --amber:     oklch(65% 0.16 75);
+  --amber-bg:  oklch(96% 0.04 75);
+  --ease-out:  cubic-bezier(0.22, 1, 0.36, 1);
+  --shadow-sm: 0 1px 3px oklch(22% 0.02 250 / 0.08), 0 1px 2px oklch(22% 0.02 250 / 0.06);
+  --shadow-md: 0 4px 12px oklch(22% 0.02 250 / 0.08), 0 2px 4px oklch(22% 0.02 250 / 0.06);
+}
+
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+body {
+  font-family: 'IBM Plex Sans Thai', sans-serif;
+  background: var(--canvas);
+  color: var(--ink);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+button { font-family: inherit; cursor: pointer; }
+input  { font-family: inherit; }
+
+/* ── PAGE LOAD ANIMATION ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate { animation: fadeUp 0.5s var(--ease-out) both; }
+.delay-1 { animation-delay: 60ms; }
+.delay-2 { animation-delay: 120ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate { animation: none; }
+  * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+/* ── TOP BAR ── */
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--white);
+  border-bottom: 1px solid var(--line);
+  padding: 0 clamp(1rem, 4vw, 2rem);
+  height: 52px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.brand-name { font-size: 0.875rem; font-weight: 600; letter-spacing: -0.01em; }
+.brand-sub  { font-size: 0.72rem; color: var(--ink-3); font-family: 'IBM Plex Mono', monospace; margin-left: 0.4rem; }
+.clock-chip {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem; color: var(--ink-3);
+  background: var(--canvas); border: 1px solid var(--line);
+  padding: 0.18rem 0.55rem; border-radius: 4px; letter-spacing: 0.04em;
+}
+
+/* ── LAYOUT ── */
+.page {
+  max-width: 1080px; margin: 0 auto;
+  padding: clamp(1.25rem, 3vw, 2rem) clamp(1rem, 4vw, 2rem);
+  display: flex; flex-direction: column; gap: 1.25rem;
+}
+.section-label {
+  font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--ink-3); margin-bottom: 0.6rem;
+}
+
+/* ── CONFIG ── */
+.config {
+  background: var(--white); border: 1px solid var(--line);
+  border-radius: 10px; padding: 1.25rem 1.5rem; box-shadow: var(--shadow-sm);
+}
+.config-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.65rem 1rem; align-items: end;
+}
+.tab-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem 1rem; grid-column: 1/-1; }
+.field { display: flex; flex-direction: column; gap: 0.28rem; }
+.field label {
+  font-size: 0.68rem; font-weight: 600; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.field input, .field select {
+  height: 36px; background: var(--canvas); border: 1px solid var(--line);
+  border-radius: 6px; padding: 0 0.7rem; font-size: 0.875rem; color: var(--ink);
+  transition: border-color 0.15s, box-shadow 0.15s; width: 100%;
+}
+.field input:focus, .field select:focus {
+  outline: none; border-color: var(--blue);
+  box-shadow: 0 0 0 3px oklch(52% 0.18 260 / 0.12); background: var(--white);
+}
+.field input::placeholder { color: var(--ink-3); }
+
+/* ── BUTTONS ── */
+.btn {
+  height: 36px; padding: 0 1rem; border-radius: 6px; border: 1px solid transparent;
+  font-size: 0.875rem; font-weight: 500;
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  transition: all 0.14s var(--ease-out); white-space: nowrap;
+}
+.btn-primary { background: var(--ink); color: var(--white); border-color: var(--ink); }
+.btn-primary:hover { background: var(--ink-2); border-color: var(--ink-2); }
+.btn-primary:active { transform: scale(0.98); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.btn-ghost { background: var(--white); color: var(--ink-2); border-color: var(--line); }
+.btn-ghost:hover { border-color: var(--ink-3); color: var(--ink); background: var(--canvas); }
+.btn-ghost:active { transform: scale(0.98); }
+.btn-sm { height: 30px; padding: 0 0.65rem; font-size: 0.78rem; border-radius: 5px; }
+
+/* ── STATS ── */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
+.stat {
+  background: var(--white); border: 1px solid var(--line);
+  border-radius: 10px; padding: 0.9rem 1.1rem; box-shadow: var(--shadow-sm);
+  transition: transform 0.15s var(--ease-out), box-shadow 0.15s;
+}
+.stat:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.stat-val {
+  font-size: clamp(1.5rem, 2.5vw, 1.9rem); font-weight: 700;
+  letter-spacing: -0.03em; line-height: 1; margin-bottom: 0.15rem;
+}
+.stat-lbl { font-size: 0.7rem; color: var(--ink-3); font-weight: 500; }
+.stat-track { height: 2px; border-radius: 99px; background: var(--line-2); margin-top: 0.55rem; overflow: hidden; }
+.stat-fill  { height: 100%; border-radius: 99px; transition: width 0.5s var(--ease-out); }
+.c-blue  { color: var(--blue); }   .fill-blue  { background: var(--blue);  width: 100%; }
+.c-green { color: var(--green); }  .fill-green { background: var(--green); width: 0%; }
+.c-red   { color: var(--red); }    .fill-red   { background: var(--red);   width: 0%; }
+.c-amber { color: var(--amber); }  .fill-amber { background: var(--amber); width: 0%; }
+
+/* ── PANEL ── */
+.panel {
+  background: var(--white); border: 1px solid var(--line);
+  border-radius: 10px; box-shadow: var(--shadow-sm); overflow: hidden;
+}
+.panel-head {
+  padding: 0.9rem 1.4rem; border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 0.65rem;
+}
+.panel-title { font-size: 0.875rem; font-weight: 600; }
+.panel-tools { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+
+.search {
+  display: flex; align-items: center; gap: 0.35rem;
+  height: 30px; background: var(--canvas); border: 1px solid var(--line);
+  border-radius: 5px; padding: 0 0.55rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.search:focus-within {
+  border-color: var(--blue); background: var(--white);
+  box-shadow: 0 0 0 3px oklch(52% 0.18 260 / 0.1);
+}
+.search svg { opacity: 0.35; flex-shrink: 0; }
+.search input {
+  border: none; background: none; outline: none;
+  font-size: 0.78rem; color: var(--ink); width: 140px;
+}
+.search input::placeholder { color: var(--ink-3); }
+
+.prog-bar { height: 2px; background: var(--line-2); position: relative; overflow: hidden; }
+.prog-fill { position: absolute; inset-block: 0; left: 0; background: var(--blue); transition: width 0.4s var(--ease-out); }
+.prog-label {
+  padding: 0.38rem 1.4rem; display: flex; align-items: center; justify-content: space-between;
+  font-size: 0.7rem; color: var(--ink-3); border-bottom: 1px solid var(--line-2);
+}
+.prog-mono { font-family: 'IBM Plex Mono', monospace; }
+
+/* ── TABLE ── */
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  padding: 0.55rem 1rem; font-size: 0.68rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-3);
+  text-align: left; background: var(--canvas); border-bottom: 1px solid var(--line);
+}
+tbody td { padding: 0.65rem 1rem; border-bottom: 1px solid var(--line-2); font-size: 0.875rem; vertical-align: middle; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr { transition: background 0.1s; }
+tbody tr:hover { background: oklch(97% 0.006 260); }
+
+@keyframes rowIn {
+  from { opacity: 0; transform: translateX(-5px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.row-in { animation: rowIn 0.28s var(--ease-out) both; }
+td.num  { color: var(--ink-3); font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; }
+
+/* badges */
+.badge {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  padding: 0.12rem 0.5rem; border-radius: 4px;
+  font-size: 0.7rem; font-weight: 600; letter-spacing: 0.02em;
+}
+.badge-present { background: var(--green-bg); color: var(--green); }
+.badge-absent  { background: var(--red-bg);   color: var(--red); }
+.badge-leave   { background: var(--amber-bg); color: var(--amber); }
+.badge-none    { background: var(--canvas);   color: var(--ink-3); border: 1px solid var(--line); }
+
+/* status buttons */
+.s-btns { display: flex; gap: 0.25rem; }
+.s-btn {
+  width: 28px; height: 28px; border-radius: 5px;
+  border: 1px solid var(--line); background: var(--canvas);
+  font-size: 0.78rem; display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s var(--ease-out);
+}
+.s-btn:hover { transform: scale(1.12); border-color: var(--ink-3); }
+.s-btn:active { transform: scale(0.94); }
+.s-btn.on-present { background: var(--green-bg); border-color: var(--green); }
+.s-btn.on-absent  { background: var(--red-bg);   border-color: var(--red); }
+.s-btn.on-leave   { background: var(--amber-bg); border-color: var(--amber); }
+
+.note-input {
+  width: 100%; max-width: 155px; height: 28px;
+  background: var(--canvas); border: 1px solid var(--line);
+  border-radius: 5px; padding: 0 0.55rem;
+  font-size: 0.78rem; color: var(--ink);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.note-input:focus {
+  outline: none; border-color: var(--blue); background: var(--white);
+  box-shadow: 0 0 0 2px oklch(52% 0.18 260 / 0.1);
+}
+.note-input::placeholder { color: var(--ink-3); }
+
+.panel-foot {
+  padding: 0.7rem 1.4rem; border-top: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.65rem; flex-wrap: wrap;
+}
+.foot-info { font-size: 0.75rem; color: var(--ink-3); }
+
+/* ── EMPTY ── */
+.empty { padding: 3rem 2rem; text-align: center; color: var(--ink-3); }
+.empty-icon { font-size: 1.5rem; margin-bottom: 0.5rem; opacity: 0.4; }
+.empty-text { font-size: 0.825rem; }
+
+/* ── SPINNER ── */
+.spinner {
+  width: 13px; height: 13px; flex-shrink: 0;
+  border: 1.5px solid currentColor; border-top-color: transparent;
+  border-radius: 50%; animation: spin 0.55s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── TOASTS ── */
+#toasts {
+  position: fixed; bottom: 1.25rem; right: 1.25rem;
+  display: flex; flex-direction: column; gap: 0.4rem; z-index: 1000;
+}
+.toast {
+  background: var(--ink); color: var(--white);
+  border-radius: 7px; padding: 0.6rem 0.9rem;
+  font-size: 0.8rem; box-shadow: var(--shadow-md);
+  animation: toastIn 0.28s var(--ease-out);
+}
+@keyframes toastIn { from { opacity: 0; transform: translateY(6px) scale(0.97); } }
+.t-success { background: var(--green); }
+.t-error   { background: var(--red); }
+
+/* ── HELP BOX ── */
+.help-box {
+  background: var(--blue-bg); border: 1px solid var(--blue-line);
+  border-radius: 7px; padding: 0.85rem 1rem;
+  font-size: 0.8rem; color: var(--ink-2); line-height: 1.65;
+}
+.help-box b { color: var(--blue); }
+code {
+  font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem;
+  background: oklch(52% 0.18 260 / 0.1); padding: 0.05em 0.3em; border-radius: 3px;
+}
+
+/* ── MODAL ── */
+.modal-wrap {
+  position: fixed; inset: 0; z-index: 200;
+  background: oklch(22% 0.02 250 / 0.45); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } }
+.modal {
+  background: var(--white); border: 1px solid var(--line); border-radius: 12px;
+  padding: 1.6rem; max-width: 430px; width: 92%; box-shadow: var(--shadow-md);
+  animation: fadeUp 0.25s var(--ease-out);
+}
+.modal h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.9rem; }
+.modal-btns { display: flex; justify-content: flex-end; margin-top: 1.1rem; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 640px) {
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .tab-row { grid-template-columns: 1fr; }
+  th:nth-child(6), td:nth-child(6) { display: none; }
+  .search input { width: 110px; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div>
+    <span class="brand-name">HomroomCheck</span>
+    <span class="brand-sub">v2</span>
+  </div>
+  <div class="clock-chip" id="clock">--:--:--</div>
+</header>
+
+<main class="page">
+
+  <!-- CONFIG -->
+  <section class="animate">
+    <div class="section-label">ตั้งค่า</div>
+    <div class="config">
+      <div class="config-grid">
+        <div class="tab-row">
+          <div class="field">
+            <label>ชื่อแท็บนักเรียน</label>
+            <input id="tabStudents" type="text" value="Students" placeholder="Students">
+          </div>
+          <div class="field">
+            <label>ชื่อแท็บบันทึก</label>
+            <input id="tabAttendance" type="text" value="Attendance" placeholder="Attendance">
+          </div>
+        </div>
+        <div class="field">
+          <label>ห้องเรียน</label>
+          <input id="roomName" type="text" placeholder="ม.3/2">
+        </div>
+        <div class="field">
+          <label>วันที่</label>
+          <input id="checkDate" type="date">
+        </div>
+        <div class="field">
+          <label>ชื่อครู</label>
+          <input id="teacherName" type="text" placeholder="ครูสมศรี">
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:.4rem">
+          <button class="btn btn-primary" id="loadBtn" onclick="loadStudents()">โหลดรายชื่อ</button>
+          <button class="btn btn-ghost" onclick="showHelp()" title="วิธีตั้งค่า">?</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <div class="stats animate delay-1" id="statsRow" style="display:none">
+    <div class="stat">
+      <div class="stat-val c-blue" id="sTotal">0</div>
+      <div class="stat-lbl">นักเรียนทั้งหมด</div>
+      <div class="stat-track"><div class="stat-fill fill-blue"></div></div>
+    </div>
+    <div class="stat">
+      <div class="stat-val c-green" id="sPresent">0</div>
+      <div class="stat-lbl">มาเรียน</div>
+      <div class="stat-track"><div class="stat-fill fill-green" id="bPresent"></div></div>
+    </div>
+    <div class="stat">
+      <div class="stat-val c-red" id="sAbsent">0</div>
+      <div class="stat-lbl">ขาด</div>
+      <div class="stat-track"><div class="stat-fill fill-red" id="bAbsent"></div></div>
+    </div>
+    <div class="stat">
+      <div class="stat-val c-amber" id="sLeave">0</div>
+      <div class="stat-lbl">ลา</div>
+      <div class="stat-track"><div class="stat-fill fill-amber" id="bLeave"></div></div>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <section class="animate delay-2" id="tableSection" style="display:none">
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title" id="panelTitle">รายชื่อนักเรียน</div>
+        <div class="panel-tools">
+          <div class="search">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="7" cy="7" r="5"/><path d="m11 11 3 3"/></svg>
+            <input type="text" id="searchInput" placeholder="ค้นหา..." oninput="filterTable()">
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="setAll('present')">✓ มาทุกคน</button>
+          <button class="btn btn-ghost btn-sm" onclick="setAll('absent')">✗ ขาดทุกคน</button>
+          <button class="btn btn-ghost btn-sm" onclick="resetAll()">↺ รีเซ็ต</button>
+        </div>
+      </div>
+
+      <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+      <div class="prog-label">
+        <span id="progText">ยังไม่ได้เช็กชื่อ</span>
+        <span class="prog-mono" id="progPct">0%</span>
+      </div>
+
+      <div id="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:40px">#</th>
+              <th>ชื่อ-สกุล</th>
+              <th style="width:68px;text-align:center">เลขที่</th>
+              <th style="width:90px">สถานะ</th>
+              <th style="width:100px">เช็กชื่อ</th>
+              <th style="width:170px">หมายเหตุ</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div class="empty" id="emptyState" style="display:none">
+          <div class="empty-icon">—</div>
+          <div class="empty-text">ไม่พบนักเรียนที่ค้นหา</div>
+        </div>
+      </div>
+
+      <div class="panel-foot">
+        <span class="foot-info" id="footInfo"></span>
+        <div style="display:flex;gap:.4rem">
+          <button class="btn btn-ghost btn-sm" onclick="loadStudents()">↺ โหลดใหม่</button>
+          <button class="btn btn-primary" id="saveBtn" onclick="saveAll()">บันทึกทั้งหมด</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div id="toasts"></div>
+
+<!-- HELP MODAL -->
+<div class="modal-wrap" id="helpModal" style="display:none" onclick="if(event.target===this)closeHelp()">
+  <div class="modal">
+    <h3>วิธีตั้งค่า Google Sheets</h3>
+    <div class="help-box">
+      สร้าง Google Sheets <b>1 ไฟล์</b> มี <b>2 แท็บ</b><br><br>
+      <b>แท็บ 1 — Students</b><br>
+      <code>id</code> · <code>name</code> · <code>number</code> · <code>room</code><br><br>
+      <b>แท็บ 2 — Attendance</b><br>
+      <code>date</code> · <code>room</code> · <code>teacher</code> · <code>student_id</code> · <code>name</code> · <code>number</code> · <code>status</code> · <code>note</code> · <code>timestamp</code><br><br>
+      นำไฟล์ไปเชื่อมที่ <b>sheetbest.com</b> และตั้งชื่อแท็บให้ตรงกับช่อง "ชื่อแท็บ" ด้านบน
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-primary" onclick="closeHelp()">รับทราบ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const BASE_URL = 'https://api.sheetbest.com/sheets/6baa1495-54cc-49f6-91f2-29ef1250397e';
+
+const studentUrl    = () => `${BASE_URL}/tabs/${encodeURIComponent(document.getElementById('tabStudents').value.trim()   || 'Students')}`;
+const attendanceUrl = () => `${BASE_URL}/tabs/${encodeURIComponent(document.getElementById('tabAttendance').value.trim() || 'Attendance')}`;
+
+let students   = [];
+let attendance = {};
+
+// clock
+(function tick() {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  setTimeout(tick, 1000);
+})();
+
+document.getElementById('checkDate').value = new Date().toISOString().slice(0, 10);
+
+// ── LOAD ──
+async function loadStudents() {
+  const room = document.getElementById('roomName').value.trim();
+  if (!room) { toast('กรุณากรอกชื่อห้องก่อน', 'error'); document.getElementById('roomName').focus(); return; }
+
+  const btn = document.getElementById('loadBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> กำลังโหลด';
+  try {
+    const res  = await fetch(studentUrl());
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const all  = await res.json();
+    if (!Array.isArray(all) || !all.length) throw new Error('ไม่พบข้อมูลนักเรียน');
+
+    // filter เฉพาะห้องที่กรอก (case-insensitive + trim)
+    const data = all.filter(s => (s.room || '').trim().toLowerCase() === room.toLowerCase());
+    if (!data.length) throw new Error(`ไม่พบนักเรียนในห้อง "${room}"`);
+
+    students = data; attendance = {};
+    renderTable(students);
+    updateStats();
+
+    document.getElementById('statsRow').style.display     = 'grid';
+    document.getElementById('tableSection').style.display = 'block';
+
+    const date = document.getElementById('checkDate').value;
+    document.getElementById('panelTitle').textContent = `ห้อง ${room} · ${thDate(date)}`;
+    document.getElementById('footInfo').textContent   = `${data.length} คน`;
+
+    toast(`ห้อง ${room} · ${data.length} คน`, 'success');
+  } catch(e) {
+    toast('โหลดล้มเหลว: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'โหลดรายชื่อ';
+  }
+}
+
+// ── RENDER ──
+function renderTable(list) {
+  const tbody = document.getElementById('tbody');
+  const empty = document.getElementById('emptyState');
+  if (!list.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  tbody.innerHTML = list.map((s, i) => {
+    const sid  = String(s.id ?? s.student_id ?? i);
+    const att  = attendance[sid] || {};
+    const st   = att.status || '';
+    const note = att.note   || '';
+    return `<tr class="row-in" style="animation-delay:${Math.min(i * 18, 280)}ms" data-sid="${sid}">
+      <td class="num">${i + 1}</td>
+      <td style="font-weight:500">${s.name || '—'}</td>
+      <td class="num" style="text-align:center">${s.number || '—'}</td>
+      <td id="badge-${sid}">${mkBadge(st)}</td>
+      <td>
+        <div class="s-btns">
+          <button class="s-btn ${st==='present'?'on-present':''}" title="มา"  onclick="setStatus('${sid}','present')">✓</button>
+          <button class="s-btn ${st==='absent' ?'on-absent' :''}" title="ขาด" onclick="setStatus('${sid}','absent')">✗</button>
+          <button class="s-btn ${st==='leave'  ?'on-leave'  :''}" title="ลา"  onclick="setStatus('${sid}','leave')">○</button>
+        </div>
+      </td>
+      <td><input class="note-input" type="text" value="${note.replace(/"/g,'&quot;')}" placeholder="หมายเหตุ..." oninput="setNote('${sid}',this.value)"></td>
+    </tr>`;
+  }).join('');
+}
+
+function mkBadge(st) {
+  return { present:`<span class="badge badge-present">มา</span>`,
+           absent: `<span class="badge badge-absent">ขาด</span>`,
+           leave:  `<span class="badge badge-leave">ลา</span>`,
+           '':     `<span class="badge badge-none">—</span>` }[st] ?? `<span class="badge badge-none">—</span>`;
+}
+
+// ── STATUS ──
+function setStatus(sid, st) {
+  if (!attendance[sid]) attendance[sid] = {};
+  attendance[sid].status = st;
+  document.getElementById(`badge-${sid}`).innerHTML = mkBadge(st);
+  document.querySelector(`[data-sid="${sid}"]`)?.querySelectorAll('.s-btn').forEach(b => {
+    b.className = 's-btn';
+    if (b.title === 'มา'  && st === 'present') b.classList.add('on-present');
+    if (b.title === 'ขาด' && st === 'absent')  b.classList.add('on-absent');
+    if (b.title === 'ลา'  && st === 'leave')   b.classList.add('on-leave');
+  });
+  updateStats();
+}
+
+function setNote(sid, note) {
+  if (!attendance[sid]) attendance[sid] = {};
+  attendance[sid].note = note;
+}
+
+// ── BULK ──
+function setAll(st) {
+  students.forEach(s => setStatus(String(s.id ?? s.student_id), st));
+  toast(st === 'present' ? 'ตั้ง "มา" ทุกคนแล้ว' : 'ตั้ง "ขาด" ทุกคนแล้ว');
+}
+function resetAll() {
+  attendance = {}; renderTable(students); updateStats();
+  toast('รีเซ็ตสถานะทั้งหมดแล้ว');
+}
+
+// ── FILTER ──
+function filterTable() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  renderTable(q ? students.filter(s => (s.name||'').toLowerCase().includes(q)) : students);
+}
+
+// ── STATS ──
+function updateStats() {
+  const total = students.length;
+  const p = cnt('present'), a = cnt('absent'), l = cnt('leave');
+  const checked = p + a + l;
+
+  document.getElementById('sTotal').textContent   = total;
+  document.getElementById('sPresent').textContent = p;
+  document.getElementById('sAbsent').textContent  = a;
+  document.getElementById('sLeave').textContent   = l;
+
+  if (total > 0) {
+    document.getElementById('bPresent').style.width = (p/total*100) + '%';
+    document.getElementById('bAbsent').style.width  = (a/total*100) + '%';
+    document.getElementById('bLeave').style.width   = (l/total*100) + '%';
+  }
+  const pct = total > 0 ? Math.round(checked/total*100) : 0;
+  document.getElementById('progFill').style.width = pct + '%';
+  document.getElementById('progText').textContent = `เช็กชื่อแล้ว ${checked} / ${total} คน`;
+  document.getElementById('progPct').textContent  = pct + '%';
+}
+const cnt = st => Object.values(attendance).filter(a => a.status === st).length;
+
+// ── SAVE ──
+async function saveAll() {
+  const date    = document.getElementById('checkDate').value;
+  const room    = document.getElementById('roomName').value    || '';
+  const teacher = document.getElementById('teacherName').value || '';
+  if (!date) { toast('กรุณาเลือกวันที่', 'error'); return; }
+
+  const unchecked = students.filter(s => !attendance[String(s.id ?? s.student_id)]?.status);
+  if (unchecked.length && !confirm(`ยังมี ${unchecked.length} คนที่ยังไม่ได้เช็กชื่อ\nบันทึกต่อไปหรือไม่?`)) return;
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> กำลังบันทึก';
+
+  const rows = students.map(s => {
+    const sid = String(s.id ?? s.student_id);
+    const att = attendance[sid] || {};
+    return { date, room, teacher, student_id: sid, name: s.name||'', number: s.number||'',
+             status: att.status||'not_checked', note: att.note||'', timestamp: new Date().toISOString() };
+  });
+
+  try {
+    const res = await fetch(attendanceUrl(), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(rows),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    toast(`บันทึก ${rows.length} รายการเรียบร้อย`, 'success');
+  } catch(e) {
+    toast('บันทึกล้มเหลว: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.innerHTML = 'บันทึกทั้งหมด';
+  }
+}
+
+// ── HELPERS ──
+function thDate(d) {
+  if (!d) return '';
+  const [y,m,day] = d.split('-');
+  return `${+day} ${['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][+m-1]} ${+y+543}`;
+}
+
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = `toast t-${type}`;
+  el.textContent = msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => {
+    el.style.transition = 'opacity 0.25s, transform 0.25s';
+    el.style.opacity = '0'; el.style.transform = 'translateY(5px)';
+    setTimeout(() => el.remove(), 260);
+  }, 3000);
+}
+
+function showHelp()  { document.getElementById('helpModal').style.display = 'flex'; }
+function closeHelp() { document.getElementById('helpModal').style.display = 'none'; }
+</script>
+</body>
+</html>
